@@ -1,0 +1,47 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+
+# Environments / secrets
+.env
+.env.*
+*.pem
+*.key
+credentials*.json
+secrets*
+
+# Logs
+*.log
+logs/
+
+# Local databases / raw data dumps — never commit patient data
+*.duckdb
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+*.dump
+data/
+raw_data/
+patient_data/
+
+# Word lock/temp files
+~$*.docx
+~$*.xlsx
+
+# Anything explicitly staged as SHIRE export pending approval
+# (kept out of the repo until explicitly cleared for release)
+**/pending_shire_export/
+**/not_for_release/
