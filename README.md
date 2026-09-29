@@ -84,8 +84,11 @@ llm-phenotyping/
 │                                      (requires SHIRE access; see note in script)
 ├── results/
 │   └── aggregate/
-│       └── synthetic/                Aggregate, model-level metrics (F1/PPV/recall/etc.) —
-│                                      no patient-level data
+│       ├── synthetic/                Aggregate, model-level metrics (F1/PPV/recall/etc.) —
+│       │                              no patient-level data
+│       └── unc_ehr/                  Aggregate, model-level metrics from the SHIRE analysis —
+│                                      no patient-level data; TP/FP/FN/TN and raw prediction
+│                                      counts are omitted (real patient counts), unlike synthetic
 ├── LICENSE                           MIT (code)
 ├── LICENSE-DATA                      CC BY 4.0 (generated SQL, results)
 └── .gitignore
@@ -93,33 +96,24 @@ llm-phenotyping/
 
 Every generated-SQL filename preserves the original model name and
 experiment label (context level, Alpha replicate number, or Beta) used
-internally, so results remain traceable back to a specific prompt condition.
+internally, so results remain traceable back to a specific prompt condition:
 
-## What cannot be shared, and why
+- `a<level>p<variant>.sql` — Alpha (context level 0–4, replicate p1–p5)
+- `b<level>.sql` — Beta (context level 0–4)
+- `_shire` suffix — same prompt/level, run against UNC EHR (SHIRE) instead of synthetic OMOP
+- `_fixed` suffix — corrected re-run after a bug fix
+- `beta_flowchart.sql` (where present) — a one-off Beta variant prompted with an added flowchart-style instruction, kept separate from the canonical `b<level>`
 
-This repository contains **no patient-level or row-level EHR data**, no
-MRNs, patient IDs, dates of birth/service, clinical notes, or other
-identifiers, and no raw SHIRE exports. Concretely, excluded from this
-repository (working project only):
+## Data availability
 
-- All per-patient cohort files, prediction ID lists, and raw SQL execution
-  outputs (e.g., `Cohort_1/person.csv`, per-model `person_id` result CSVs).
-  Only *aggregate*, model-level metrics (F1, PPV, recall, Jaccard, FPR,
-  executability) are shared.
-- Any aggregate table with small patient-count cells unless explicitly
-  confirmed as approved for SHIRE export.
-- Screenshots taken from inside the SHIRE environment.
-- Full database backups/dumps and query logs.
-- Local file paths, credentials, or environment-specific secrets. (No
-  credentials or API keys were found anywhere in the source project; a small
-  number of analysis scripts contained developer machine paths, which were
-  not carried into this repository, or reference generic SHIRE drive labels
-  like `Z:\output`, which do not identify any system, person, or credential.)
-
-The UNC EHR analysis code in `analysis/unc_ehr/` is included because it
-contains no data of any kind, only analysis logic — but it cannot be run
-outside SHIRE, since its required inputs are UNC EHR patient data that
-never leaves that environment.
+This repository contains no patient-level or row-level EHR data — no MRNs,
+patient IDs, dates of birth/service, clinical notes, or other identifiers,
+and no raw SHIRE exports. `results/aggregate/` holds only aggregate,
+model-level metrics (F1, PPV, Recall, Jaccard, FPR, executability);
+per-patient cohort files and prediction-ID lists are not included.
+`analysis/unc_ehr/analyze_t2dm_unc_ehr.py` is included for transparency but
+contains no data itself and cannot be run outside SHIRE, since its inputs
+are UNC EHR patient data that never leaves that environment.
 
 ## Reproducing the aggregate analyses
 
@@ -137,6 +131,7 @@ and reproduces the tables in `results/aggregate/synthetic/`.
 the UNC EHR aggregate metrics, but can only be run from inside SHIRE by
 someone with approved SHIRE access, against the (non-public) per-model
 prediction files and cohort labels described in the script's docstring.
+Its aggregate output tables are in `results/aggregate/unc_ehr/`.
 
 ## License
 

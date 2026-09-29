@@ -1,0 +1,5 @@
+reference,context_group,n_models,alpha_mean_F1_across_models,beta_mean_F1_across_models,wilcoxon_W_two_sided,wilcoxon_p_two_sided,wilcoxon_W_beta_greater,wilcoxon_p_beta_greater,n_positive,n_negative,n_ties,n_non_tie,sign_test_p_two_sided,note
+emerge_t2dm_v5,level1,8,0.5877174350589669,0.5307893472333478,15.0,0.7421875,21.0,0.37109375,3,5,0,8,0.7265625,Exploratory across-model paired comparison; beta has fewer prompt attempts than alpha.
+emerge_t2dm_v5,level2,8,0.5444406159957589,0.5658649416052082,15.0,0.7421875,21.0,0.37109375,2,6,0,8,0.2890625,Exploratory across-model paired comparison; beta has fewer prompt attempts than alpha.
+emerge_t2dm_v5,limited_1_2_pooled,8,0.5660790255273629,0.5483271444192779,17.0,0.9453125,19.0,0.47265625,3,5,0,8,0.7265625,Exploratory across-model paired comparison; beta has fewer prompt attempts than alpha.
+emerge_t2dm_v5,full_3,8,0.5881169508952868,0.6308052432849236,3.0,0.0390625,3.0,0.98828125,6,2,0,8,0.2890625,Exploratory across-model paired comparison; beta has fewer prompt attempts than alpha.

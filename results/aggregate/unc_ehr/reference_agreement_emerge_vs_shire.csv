@@ -1,0 +1,2 @@
+comparison,universe_n,emerge_positive_raw_n,emerge_positive_in_universe_n,shire_positive_n,TP,FP,FN,TN,Predicted_Positive,PPV,Recall,F1,Jaccard,FPR,Specificity,Accuracy
+shire_cohort1_vs_emerge_t2dm_v5_reference_standard,23820,5732,5732,8000,3708,4292,2024,13796,8000,0.4635,0.6468946266573622,0.5400524322749781,0.3699122106943336,0.2372843874391862,0.7627156125608138,0.7348446683459278

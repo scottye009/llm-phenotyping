@@ -1,0 +1,6 @@
+cohort,shire_expected_label,n_raw,n_removed_as_overlap,n_after_removing_overlap
+Cohort_1,positive,8000,0,8000
+Cohort_2,negative,8000,116,7884
+Cohort_3,negative,8000,34,7966
+Cohort_2_and_3_pooled,negative,15970,150,15820
+Labeled_universe,positive+negative,23970,150,23820

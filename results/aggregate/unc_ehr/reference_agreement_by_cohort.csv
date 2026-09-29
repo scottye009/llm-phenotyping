@@ -1,0 +1,4 @@
+cohort,shire_expected_label,n_after_removing_overlap,emerge_positive_n,emerge_negative_n,Precision_PPV_within_cohort,NPV_within_cohort,share_of_all_emerge_positive_n,share_of_all_emerge_positive_rate,Jaccard_vs_emerge_positive,agree_with_emerge_n,agree_with_emerge_rate,disagree_with_emerge_n,disagree_with_emerge_rate
+Cohort_1,positive,8000,3708,4292,0.4635,,3708,0.6468946266573622,0.3699122106943336,3708,0.4635,4292,0.5365
+Cohort_2,negative,7884,1335,6549,,0.8306697108066972,1335,0.2329030006978367,0.10870450289064408,6549,0.8306697108066972,1335,0.1693302891933029
+Cohort_3,negative,7966,695,7271,,0.9127542053728346,695,0.12124912770411723,0.053449204,7271,0.9127542053728346,695,0.087245795
