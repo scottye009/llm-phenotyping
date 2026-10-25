@@ -38,16 +38,19 @@ MODEL_DISPLAY_NAMES = {
     "gpt": "ChatGPT 5.5",
     "claude": "Claude Sonnet 4.5",
     "llama": "Llama-3.3-70B",
-    "gemini": "Gemini",
+    "gemini": "Gemini 3",
     "copilot": "Copilot",
     "querygpt": "QueryGPT",
     "omop-assistant": "OMOP-SQL-Assistant",
     "gemma": "Gemma-4-31B",
 }
 
+# "gemina_b3.csv" is a typo'd filename for the Gemini model's b3 output.
+MODEL_ALIASES = {"gemina": "gemini"}
+
 EXCLUDE_MODELS = {"medgemma"}
 
-CONTEXT_LEVELS = ["0", "1", "2", "4"]
+CONTEXT_LEVELS = ["0", "1", "2", "3", "4"]
 
 # =============================================================================
 # Helper Functions
@@ -131,6 +134,7 @@ for path in sorted(BASE_DIR.glob("*.csv")):
     parsed = parse_filename(path)
     if parsed is None:
         continue
+    parsed["model"] = MODEL_ALIASES.get(parsed["model"], parsed["model"])
     if parsed["model"] in EXCLUDE_MODELS:
         continue
     pred_ids = read_person_ids(path)
@@ -441,6 +445,7 @@ for model in df["model"].unique():
     b0_row = beta_rows[beta_rows["context_level"] == "0"]
     b1_row = beta_rows[beta_rows["context_level"] == "1"]
     b2_row = beta_rows[beta_rows["context_level"] == "2"]
+    b3_row = beta_rows[beta_rows["context_level"] == "3"]
     b4_row = beta_rows[beta_rows["context_level"] == "4"]
 
     metrics_by_tier = {}
@@ -448,18 +453,19 @@ for model in df["model"].unique():
         b0_val = b0_row[metric].values[0] if not b0_row.empty else np.nan
         b1_val = b1_row[metric].values[0] if not b1_row.empty else np.nan
         b2_val = b2_row[metric].values[0] if not b2_row.empty else np.nan
+        b3_val = b3_row[metric].values[0] if not b3_row.empty else np.nan
         b4_val = b4_row[metric].values[0] if not b4_row.empty else np.nan
 
         # Average of b1/b2 as "mid-context" tier
         mid_vals = [v for v in [b1_val, b2_val] if not np.isnan(v)]
         mid_val = np.mean(mid_vals) if mid_vals else np.nan
 
-        metrics_by_tier[metric] = {"b0": b0_val, "b1": b1_val, "b2": b2_val, "mid": mid_val, "b4": b4_val}
+        metrics_by_tier[metric] = {"b0": b0_val, "b1": b1_val, "b2": b2_val, "mid": mid_val, "b3": b3_val, "b4": b4_val}
 
     f1_tiers = metrics_by_tier["F1"]
     tier_vals = []
     tier_labels = []
-    for label, key in [("b0", "b0"), ("mid(b1/b2)", "mid"), ("b4", "b4")]:
+    for label, key in [("b0", "b0"), ("mid(b1/b2)", "mid"), ("b3", "b3"), ("b4", "b4")]:
         if not np.isnan(f1_tiers[key]):
             tier_vals.append(f1_tiers[key])
             tier_labels.append(label)
@@ -490,10 +496,10 @@ beta_prog_df.to_csv(OUTPUT_DIR / "analysis2_context_progression.csv", index=Fals
 
 n_monotonic = beta_prog_df["monotonic_F1"].sum() if not beta_prog_df.empty else 0
 n_total_prog = beta_prog_df["monotonic_F1"].notna().sum()
-print(f"  Monotonically increasing F1 (b0 < mid < b4): {n_monotonic}/{n_total_prog} models")
+print(f"  Monotonically increasing F1 (b0 < mid < b3 < b4): {n_monotonic}/{n_total_prog} models")
 
 # Wilcoxon signed-rank tests for pairwise context tiers
-tier_pairs = [("b0", "mid", "b0 vs b1/b2"), ("mid", "b4", "b1/b2 vs b4"), ("b0", "b4", "b0 vs b4")]
+tier_pairs = [("b0", "mid", "b0 vs b1/b2"), ("mid", "b3", "b1/b2 vs b3"), ("b3", "b4", "b3 vs b4"), ("b0", "b4", "b0 vs b4")]
 tier_test_results = []
 
 for lower_key, upper_key, label in tier_pairs:
@@ -523,16 +529,16 @@ for lower_key, upper_key, label in tier_pairs:
 tier_tests_df = pd.DataFrame(tier_test_results)
 tier_tests_df.to_csv(OUTPUT_DIR / "analysis2_tier_tests.csv", index=False)
 
-# Friedman test across models that have all 3 tiers
-full_tier_models = beta_prog_df.dropna(subset=["F1_b0", "F1_mid", "F1_b4"])
+# Friedman test across models that have all 4 tiers
+full_tier_models = beta_prog_df.dropna(subset=["F1_b0", "F1_mid", "F1_b3", "F1_b4"])
 if len(full_tier_models) >= 3:
     friedman_stat, friedman_p = stats.friedmanchisquare(
-        full_tier_models["F1_b0"], full_tier_models["F1_mid"], full_tier_models["F1_b4"]
+        full_tier_models["F1_b0"], full_tier_models["F1_mid"], full_tier_models["F1_b3"], full_tier_models["F1_b4"]
     )
-    print(f"  Friedman test (F1 across b0/mid/b4): chi2={friedman_stat:.3f}, p={friedman_p:.4f}")
+    print(f"  Friedman test (F1 across b0/mid/b3/b4): chi2={friedman_stat:.3f}, p={friedman_p:.4f}")
 else:
     friedman_stat, friedman_p = np.nan, np.nan
-    print("  Friedman test: not enough models with all 3 tiers")
+    print("  Friedman test: not enough models with all 4 tiers")
 
 # =============================================================================
 # 4. Analysis 3: Model ranking (including execution rate)
@@ -694,11 +700,11 @@ plt.tight_layout()
 plt.savefig(OUTPUT_DIR / "fig1_model_ranking.png", dpi=150)
 plt.close()
 
-# --- Fig 2: Context-level progression line plot (b0, mid(b1/b2), b4) ---
+# --- Fig 2: Context-level progression line plot (b0, mid(b1/b2), b3, b4) ---
 fig, axes = plt.subplots(2, 2, figsize=(14, 10))
 metrics_to_plot = [("F1", "F1 Score"), ("PPV", "Precision (PPV)"), ("Recall", "Recall (Sensitivity)"), ("FPR", "False Positive Rate")]
-tier_keys = ["b0", "mid", "b4"]
-tier_labels_x = ["b0\n(zero-shot)", "b1/b2\n(mid-context)", "b4\n(full context)"]
+tier_keys = ["b0", "mid", "b3", "b4"]
+tier_labels_x = ["b0\n(zero-shot)", "b1/b2\n(mid-context)", "b3\n(context 3)", "b4\n(full context)"]
 
 for ax, (metric, label) in zip(axes.flat, metrics_to_plot):
     for _, row in beta_prog_df.iterrows():
@@ -968,8 +974,8 @@ plt.savefig(OUTPUT_DIR / "fig6a_recall_vs_ppv_alpha.png", dpi=150)
 plt.close()
 
 # --- Fig 6b: Recall vs PPV scatter (beta only, marker shape = context level) ---
-CONTEXT_MARKERS = {"0": "o", "1": "s", "2": "^", "4": "D"}  # circle, square, triangle, diamond
-CONTEXT_MARKER_LABELS = {"0": "v0 (zero-shot)", "1": "v1", "2": "v2", "4": "v4 (full)"}
+CONTEXT_MARKERS = {"0": "o", "1": "s", "2": "^", "3": "P", "4": "D"}  # circle, square, triangle, plus, diamond
+CONTEXT_MARKER_LABELS = {"0": "v0 (zero-shot)", "1": "v1", "2": "v2", "3": "v3", "4": "v4 (full)"}
 
 fig, ax = plt.subplots(figsize=(10, 8))
 model_handles = []
@@ -1394,11 +1400,11 @@ report_lines.append("\n" + "=" * 80)
 report_lines.append("ANALYSIS 2: CONTEXT-LEVEL PROGRESSION (b0 < b1/b2 < b4)")
 report_lines.append("=" * 80)
 report_lines.append("\nQuestion: Do beta prompts improve as more context is provided?")
-report_lines.append("Structure: b0 (zero-shot) < b1/b2 (mid-context, averaged) < b4 (full context)")
-report_lines.append(f"\nModels with monotonically increasing F1 (b0 < mid < b4): {n_monotonic}/{n_total_prog}")
+report_lines.append("Structure: b0 (zero-shot) < b1/b2 (mid-context, averaged) < b3 < b4 (full context)")
+report_lines.append(f"\nModels with monotonically increasing F1 (b0 < mid < b3 < b4): {n_monotonic}/{n_total_prog}")
 
 if not np.isnan(friedman_stat):
-    report_lines.append(f"Friedman test (F1 across b0/mid/b4): chi2={friedman_stat:.3f}, p={friedman_p:.4f}")
+    report_lines.append(f"Friedman test (F1 across b0/mid/b3/b4): chi2={friedman_stat:.3f}, p={friedman_p:.4f}")
     if friedman_p < 0.05:
         report_lines.append("  -> Significant: context level significantly affects F1 performance.")
     else:

@@ -1,4 +1,5 @@
 comparison,n_models,n_improved,wilcoxon_W,wilcoxon_p
 b0 vs b1/b2,8,4,13.0,0.9375
-b1/b2 vs b4,8,6,3.0,0.0390625
+b1/b2 vs b3,8,6,4.0,0.0546875
+b3 vs b4,8,3,18.0,1.0
 b0 vs b4,8,6,5.0,0.078125

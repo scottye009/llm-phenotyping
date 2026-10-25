@@ -1,0 +1,111 @@
+WITH 
+-- patient set
+patient AS (
+    SELECT 
+        p.person_id,
+        p.gender_concept_id sex,
+        p.race_concept_id race,
+        p.ethnicity_concept_id ethnicity,
+        p.year_of_birth year_birth
+    FROM 
+        @cdm_database_schema.person p
+),
+-- T2DM DX
+T2DM AS (
+    SELECT 
+        person_id,
+        COUNT(DISTINCT visit_occurrence_id) T2DM_DX,
+        'Y' Meets_ICD9_10_Filter
+    FROM 
+        @cdm_database_schema.condition_occurrence
+    WHERE 
+        condition_concept_id IN (
+            4140466, 43531588, 45769888, 45763582, 37018912, 43531578, 43531559, 43531566, 43531653, 43531577, 
+            43531562, 37016163, 45769894, 45757474, 37016768, 4221495, 43531616, 43531564, 443733, 43530689, 
+            4226121, 36712686, 36712687, 43531608, 43531597, 443732, 45757280, 45769906, 4177050, 4223463, 
+            43530690, 45769890, 37018728, 45772019, 45769889, 37016349, 45770880, 45757392, 45771064, 45757447, 
+            45757446, 45757445, 45757444, 45757363, 45772060, 36714116, 45769875, 4130162, 45771072, 45770830, 
+            45769905, 45757435, 43531651, 45770881, 4222415, 45769828, 376065, 45757450, 45770883, 45757255, 
+            37016354, 43530656, 45769836, 443729, 45757278, 37017432, 4063043, 43531010, 4129519, 43530685, 
+            45770831, 45757499, 443731, 45770928, 45757075, 45769872, 45769835, 36712670, 46274058, 4142579, 
+            45770832, 45773064, 201826, 4230254, 4304377, 4321756, 4196141, 4099217, 201530, 4151282, 4099216, 
+            4198296, 4193704, 4200875, 4099651, 45766052, 40482801, 45757277, 45757449, 443734
+        )
+    GROUP BY 
+        person_id
+),
+-- T1DM DX
+T1DM AS (
+    SELECT 
+        person_id,
+        COUNT(DISTINCT visit_occurrence_id) T1DM_DX
+    FROM 
+        @cdm_database_schema.condition_occurrence
+    WHERE 
+        condition_concept_id IN (
+            36715571, 45769891, 37016767, 45763585, 4225656, 45773688, 45773576, 45769901, 45771075, 45769902, 
+            45769903, 45769837, 45769832, 45757674, 435216, 377821, 37016353, 45769904, 43531565, 37017429, 
+            37016348, 45757432, 443592, 201531, 45757393, 45771067, 45769876, 4228112, 45757362, 4047906, 
+            4102018, 36717215, 45757073, 439770, 4224254, 4143857, 45757535, 37016179, 43530660, 37016180, 
+            4225055, 4224709, 45769829, 45769830, 45763583, 45769834, 36713094, 318712, 37018566, 4222687, 
+            4222553, 37017431, 4063042, 43531008, 43531009, 45763584, 45757604, 200687, 45757266, 4227210, 
+            45771533, 45773567, 45769833, 46269764, 4143689, 45769873, 201254, 4099215, 40484648, 4152858, 
+            4099214, 443412, 45766051, 45757507, 45769892, 45770902, 45757074
+        )
+    GROUP BY 
+        person_id
+),
+-- T2DM MED
+diabetes_med AS (
+    SELECT 
+        person_id,
+        COUNT(DISTINCT drug_exposure_id) diabetes_med
+    FROM 
+        @cdm_database_schema.drug_exposure
+    WHERE 
+        drug_concept_id IN (
+            1529331, 1530014, 44816332, 43013884, 43526465, 1594973, 44785829, 45774435, 45774751, 1583722, 
+            1597756, 1560171, 1559684, 40239216, 40170911, 44506754, 1503297, 1510202, 1502826, 1525215, 
+            1516766, 1547504, 40166035, 1580747, 1502809, 1502855, 1515249, 596554, 19059796, 19059796, 
+            19001441, 1517998
+        )
+    GROUP BY 
+        person_id
+),
+-- patient_dxenct
+patient_dxenct AS (
+    SELECT 
+        p.person_id,
+        COUNT(DISTINCT e.visit_occurrence_id) patient_dxenct,
+        MIN(e.enc_date) recent_start_date
+    FROM 
+        @cdm_database_schema.person p
+    LEFT JOIN 
+        @cdm_database_schema.condition_occurrence e ON e.person_id = p.person_id
+    GROUP BY 
+        p.person_id
+)
+SELECT 
+    p.person_id,
+    p.gender_concept_id sex,
+    p.race_concept_id race,
+    p.ethnicity_concept_id ethnicity,
+    p.year_of_birth year_birth,
+    CASE WHEN T2DM.person_id IS NULL THEN 0 ELSE 1 END Meets_ICD9_10_Filter,
+    NULL Meets_DataFloor,
+    CASE WHEN patient_dxenct.person_id IS NULL THEN 0 ELSE patient_dxenct.patient_dxenct END patient_dxenct,
+    CASE WHEN T2DM.person_id IS NULL THEN 0 ELSE T2DM.T2DM_DX END cod_dx_t2dm,
+    CASE WHEN T1DM.person_id IS NULL THEN 0 ELSE T1DM.T1DM_DX END cod_dx_t1dm,
+    CASE WHEN diabetes_med.person_id IS NULL THEN 0 ELSE diabetes_med.diabetes_med END cod_med_antidiabetics
+INTO 
+    #features
+FROM 
+    patient p
+LEFT OUTER JOIN 
+    patient_dxenct ON p.person_id = patient_dxenct.person_id
+LEFT OUTER JOIN 
+    T2DM ON p.person_id = T2DM.person_id
+LEFT OUTER JOIN 
+    T1DM ON p.person_id = T1DM.person_id
+LEFT OUTER JOIN 
+    diabetes_med ON p.person_id = diabetes_med.person_id;
